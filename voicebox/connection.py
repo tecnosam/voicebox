@@ -2,9 +2,9 @@ import socket
 
 from typing import Union
 
-from networking.data_utils import MessageStack
+from voicebox.data_utils import MessageStack
 
-from networking.audio import Audio
+from voicebox.audio import Audio
 
 from threading import Thread
 

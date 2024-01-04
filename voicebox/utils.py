@@ -34,3 +34,4 @@ def setup_client_socket(host, port):
         _client = None
 
     return _client
+

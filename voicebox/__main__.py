@@ -1,6 +1,6 @@
-from networking.node import Node, MicrophoneStreamerThread
+from voicebox.node import Node, MicrophoneStreamerThread
 
-from networking.utils import extract_ip
+from voicebox.utils import extract_ip
 
 PORT = 4000
 

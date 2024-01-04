@@ -1,7 +1,7 @@
 
-from networking.connection import Connection
-from networking.audio import Audio
-from networking.utils import setup_server_socket, setup_client_socket
+from voicebox.connection import Connection
+from voicebox.audio import Audio
+from voicebox.utils import setup_server_socket, setup_client_socket
 
 from typing import Dict
 import pyaudio
