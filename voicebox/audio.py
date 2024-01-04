@@ -3,13 +3,18 @@ import pyaudio
 
 class Audio:
 
-    CHUNK = 1024 * 20
+    CHUNK = 1024 * 5
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
     RATE = 50000
 
     pya = pyaudio.PyAudio()
-    o_stream = pya.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True)
+    o_stream = pya.open(
+        format=FORMAT,
+        channels=CHANNELS,
+        rate=RATE,
+        output=True
+    )
 
     @staticmethod
     def record(callback=None):

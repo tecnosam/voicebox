@@ -32,7 +32,7 @@ class MicrophoneStreamerThread:
             futures = []
             for node in Node.nodes:
 
-                node.broadcast_audio(in_data)
+                # node.broadcast_audio(in_data)
                 futures.append(MicrophoneStreamerThread.pool.submit(
                     node.broadcast_audio,
                     in_data
