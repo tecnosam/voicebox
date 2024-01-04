@@ -1,13 +1,15 @@
+import logging
+
+from typing import Dict
+
+from threading import Thread
+from concurrent.futures import ThreadPoolExecutor
+
+import pyaudio
 
 from voicebox.connection import Connection
 from voicebox.audio import Audio
 from voicebox.utils import setup_server_socket, setup_client_socket
-
-from typing import Dict
-import pyaudio
-
-from threading import Thread
-from concurrent.futures import ThreadPoolExecutor
 
 
 class MicrophoneStreamerThread:
@@ -48,7 +50,7 @@ class Node:
         self.username = username
 
         self.connection_pool: Dict[str, Connection] = {}  # nodes user is connected to
-        self.muted = True
+        self.muted = False
 
         self.socket = setup_server_socket(self.port)
 
@@ -62,7 +64,7 @@ class Node:
         self.muted = not self.muted
 
     def log(self, msg):
-        print(f"{self.username}: {msg}")
+        logging.info(f"{self.username}: {msg}")
 
     def listen(self):
         """Listen for new connections"""
@@ -87,7 +89,7 @@ class Node:
         machine_socket = setup_client_socket(host, port)
 
         if machine_socket is None:
-            print(f"Node {self.username}: {host} is Unreachable")
+            logging.error(f"Node {self.username}: {host} is Unreachable")
             return
 
         machine_connection = Connection(machine_socket)
@@ -114,3 +116,4 @@ class Node:
 
 
 microphone_streamer = MicrophoneStreamerThread()
+

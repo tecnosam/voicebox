@@ -2,6 +2,8 @@ import socket
 
 from typing import Union
 
+import logging
+
 from voicebox.data_utils import MessageStack
 
 from voicebox.audio import Audio
@@ -37,7 +39,7 @@ class Connection:
             packet_size = self.socket.recv(self.INT_BYTE_SIZE)
             packet_size = int.from_bytes(packet_size, "big")
 
-            print("Receiving {} bytes of data...".format(packet_size))
+            logging.debug("Receiving {} bytes of data...".format(packet_size))
 
             packet = self.socket.recv(packet_size)
             packet = self.decrypt_packet(packet)
@@ -83,19 +85,20 @@ class Connection:
             return packet
 
         if self.PACKET_TYPES[packet_type] == 'MSG':
-            print("MESSAGE RECEIVED: {}".format(data))
+            logging.info("MESSAGE RECEIVED: {}".format(data))
 
         elif self.PACKET_TYPES[packet_type] == 'CONNECTION':
             if data == b'SUCCESS':
-                print("Machines Connected successfully")
+                logging.info("Machines Connected successfully")
 
             elif data == b'IS_ALIVE':
-                print("Machine Connection Verified successfully")
+                logging.info("Machine Connection Verified successfully")
 
             elif data == b'DISCONNECTED':
-                print("Machine has been disconnected")
+                logging.info("Machine has been disconnected")
 
         elif self.PACKET_TYPES[packet_type] == 'AUDIO':
             Audio.play_audio(data)
 
         return packet
+

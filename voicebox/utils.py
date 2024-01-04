@@ -1,4 +1,5 @@
 import socket
+import logging
 
 
 def extract_ip():
@@ -7,7 +8,7 @@ def extract_ip():
         st.connect(('10.255.255.255', 1))
         ip = st.getsockname()[0]
     except OSError:
-        print("OS ERROR, defaulting to home address")
+        logging.debug("OS ERROR, defaulting to home address")
         ip = '127.0.0.1'
 
     return ip
@@ -15,23 +16,24 @@ def extract_ip():
 
 def setup_server_socket(port: int):
     host = extract_ip()
-    _server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print(f"Created Socket. binding connection to {host} at {port}...")
-    _server.bind((host, port))
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    print("Done. You're all set Network wise")
+    logging.debug(f"Created Socket. binding connection to {host} at {port}...")
+    server.bind((host, port))
 
-    return _server
+    logging.debug("Done. You're all set Network wise")
+
+    return server
 
 
 def setup_client_socket(host, port):
     try:
-        _client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        _client.connect((host, port))
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((host, port))
 
-        return _client
+        return client
     except OSError as e:
-        _client = None
+        client = None
 
-    return _client
+    return client
 

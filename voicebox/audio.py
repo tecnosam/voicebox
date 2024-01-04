@@ -37,4 +37,3 @@ class Audio:
         Audio.o_stream.close()
         Audio.pya.terminate()
 
-# 10.20.47.72

@@ -7,12 +7,11 @@ Voice box is an open source python tool for voice calls and messaging over LAN. 
 ## Requirements
 
 1. `pyaudio` is the only requirement for capturing your microphone
-2. `sounddevice` helps in suppressing warnings you may get if you're running this app on Linux
 
 
 ## How to Run 
 
-1. Run `pip install pyaudio`.
+1. Run `pip install -r requirements.txt` to install all requirements.
 2. Run `python cli.py` or `python -m networking`.
 3. Input a username
 4. Do the same thing on another machine. Make sure it's connected to the same network.
