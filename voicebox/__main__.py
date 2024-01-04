@@ -1,27 +1,35 @@
+import logging
+
 from voicebox.node import Node, MicrophoneStreamerThread
 
 from voicebox.utils import extract_ip
 
-PORT = 4000
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(name)s %(levelname)-8s  %(message)s',
+    datefmt='(%H:%M:%S)'
+)
 
 
 def main():
 
-    global PORT
-    print("LOL", extract_ip())
-
     username = input("Username: ")
+
+    ip = extract_ip()
+    port = 4000
 
     while True:
         try:
-            node = Node(username, port=PORT)
+            node = Node(username, port=port)
             break
         except OSError:
-            PORT += 1
-            print(f"Port in Use. Retrying {PORT}...")
+            port += 1
+            print(f"Port in Use. Retrying {port}...")
 
+    print(f"Welcome {username}! Others can call you at {ip}:{port}")
 
-    # test = Node('test 2', port=5000)
+    MicrophoneStreamerThread.initiate_microphone_stream()
 
     while True:
 
@@ -30,12 +38,25 @@ def main():
 
         if opt in ('new_call', 'call', 'new_chat'):
             host = input("IP of machine to connect to: ")
-            port = PORT
+            third_party_port = port
 
             if ':' in host:
-                host, port = host.split(':')
+                host, third_party_port = host.split(':')
 
-            node.connect_to_machine(host, int(port))
+            if host == ip and third_party_port == port:
+
+                print("Cannot call yourself")
+                continue
+
+            node.connect_to_machine(host, int(third_party_port))
+
+        elif opt in ('end_call',):
+
+            print(node.connection_pool, 'opt', opt)
+
+            address = input("Input the address of client to end: ")
+
+            node.end_call(address)
 
         elif opt in ('view', 'view_machines'):
             print(node.connection_pool)
@@ -43,6 +64,9 @@ def main():
         elif opt in ('toggle_mute', 'mute'):
             MicrophoneStreamerThread.MUTED = not MicrophoneStreamerThread.MUTED
             node.toggle_mute()
+            
+            print("Muted State: ", MicrophoneStreamerThread.MUTED)
+            print("Node Muted State: ", node.muted)
 
         elif opt in ('send', 'send_msg'):
             msg = input("Msg: ")

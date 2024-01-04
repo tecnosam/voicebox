@@ -3,7 +3,7 @@ import logging
 from typing import Dict
 
 from threading import Thread
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pyaudio
 
@@ -18,20 +18,32 @@ class MicrophoneStreamerThread:
 
     MUTED = False
 
-    def __init__(self):
+    @classmethod
+    def initiate_microphone_stream(cls):
 
-        self.stream = self.stream_microphone()
-        self.stream.start_stream()
+        cls.stream = cls.stream_microphone()
+        cls.stream.start_stream()
 
     @staticmethod
     def callback(in_data, frame_count, time_info, status):
         # print(frame_count, time_info, status)
 
         if not MicrophoneStreamerThread.MUTED:
+            futures = []
             for node in Node.nodes:
-                node.broadcast_audio(in_data)
-                # MicrophoneStreamerThread.pool.submit(node.broadcast_audio, in_data)
 
+                node.broadcast_audio(in_data)
+                futures.append(MicrophoneStreamerThread.pool.submit(
+                    node.broadcast_audio,
+                    in_data
+                ))
+
+            for future in as_completed(futures):
+
+                future
+                # logging.debug(f"{future} completed. Transmitted audio feed...")
+
+            del futures
         return in_data, pyaudio.paContinue
 
     @staticmethod
@@ -74,9 +86,10 @@ class Node:
         self.socket.listen()
         while True:
 
-            client, address = self.socket.accept()
+            client, address_tuple = self.socket.accept()
 
-            if self.validate_connection(address):
+            if self.validate_connection(address_tuple):
+                address, _ = address_tuple
                 self.connection_pool[address] = Connection(client)
                 self.connection_pool[address].send_message("CONNECTION_SUCCESS", 0)
 
@@ -96,24 +109,46 @@ class Node:
         self.connection_pool[host] = machine_connection
 
     def broadcast_audio(self, audio_stream):
-
         if self.muted:
             return
 
-        for addr in self.connection_pool:
+        addresses = list(self.connection_pool.keys())
 
-            connection = self.connection_pool[addr]
+        for addr in addresses:
+
+            connection = self.connection_pool.get(addr)
+
+            if not connection:
+                # Connection was killed in another thread
+                continue
 
             if connection.on_hold:
                 continue
 
+            if connection.killed:
+                # We were informed by the connection
+                # So we don't need to inform the connection
+                print("Connection Killed while Broadcasting")
+                self.end_call(addr, inform_connection=False)
+                continue
+
             connection.send_message(audio_stream, 2)
+
+    def end_call(self, addr: str, inform_connection: bool = True):
+
+        connection = self.connection_pool.pop(addr, None)
+
+        if not addr:
+
+            print("Not Found!")
+            logging.error(f"Cannot find Address {addr} in pool")
+            return 
+ 
+        if inform_connection:
+            connection.kill()
 
     @staticmethod
     def validate_connection(address: str) -> bool:
 
         return bool(input("Would you like to connect to this client at {}? ".format(address)))
-
-
-microphone_streamer = MicrophoneStreamerThread()
 

@@ -19,9 +19,17 @@ class Connection:
 
     PACKET_TYPES = ['CONNECTION', 'MSG', 'AUDIO', 'VIDEO']
 
-    def __init__(self, client, packet_handlers: list = []):
+    def __init__(
+        self,
+        client,
+        packet_handlers: list = []
+    ):
 
         self.socket: socket.socket = client
+
+        self.__kill_switch = False
+
+        self.on_hold = False
 
         self.packet_handlers = [self.default_packet_handler] + packet_handlers
 
@@ -30,49 +38,72 @@ class Connection:
 
         self.messages = MessageStack()
 
-        self.on_hold = False
-
     def receive_data(self):
         """Receive Data Packets from this connected User"""
 
         while True:
-            packet_size = self.socket.recv(self.INT_BYTE_SIZE)
-            packet_size = int.from_bytes(packet_size, "big")
+            try:
 
-            logging.debug("Receiving {} bytes of data...".format(packet_size))
+                if self.__kill_switch:
+                    print("Switch Has been killed!")
+                    break
 
-            packet = self.socket.recv(packet_size)
-            packet = self.decrypt_packet(packet)
+                packet_size = self.socket.recv(self.INT_BYTE_SIZE)
+                packet_size = int.from_bytes(packet_size, "big")
 
-            for packet_handler in self.packet_handlers:
-                packet = packet_handler(packet)
+                if packet_size == 0:
+                    logging.info("Your connection request was not accepted")
+                    self.kill(inform_client=False)
+
+                logging.debug("Receiving {} bytes of data...".format(packet_size))
+
+                packet = self.socket.recv(packet_size)
+                packet = self.decrypt_packet(packet)
+
+                for packet_handler in self.packet_handlers:
+                    packet = packet_handler(packet)
+
+            except ConnectionResetError:
+                logging.error("Connection to client lost: Adviced to kill connection")
+            except OSError:
+
+                logging.info("Channel already closed: Adviced to kill connection")
 
     def send_message(self, message, msg_type=1):
 
-        packet_type = int.to_bytes(msg_type, self.INT_BYTE_SIZE, "big")
+        try:
+            packet_type = int.to_bytes(msg_type, self.INT_BYTE_SIZE, "big")
 
-        if isinstance(message, str):
-            message = message.encode()
+            if isinstance(message, str):
+                message = message.encode()
 
-        payload = packet_type + message
-        encrypted_payload = self.encrypt_payload(payload)
+            payload = packet_type + message
+            encrypted_payload = self.encrypt_payload(payload)
 
-        packet_size = len(encrypted_payload)
-        size = int.to_bytes(packet_size, self.INT_BYTE_SIZE, "big")
+            packet_size = len(encrypted_payload)
+            size = int.to_bytes(packet_size, self.INT_BYTE_SIZE, "big")
 
-        self.socket.send(size)
-        self.socket.send(encrypted_payload)
+            self.socket.send(size)
+            self.socket.send(encrypted_payload)
 
-        return "Done"
+            return "Done"
+        except BrokenPipeError:
+
+            logging.error("Socket No longer usable: Adviced to kill connection")
+
+        except ConnectionResetError:
+
+            logging.debug("Connection reset while sending packet")
+            self.kill(inform_client=False)
 
     @staticmethod
     def decrypt_packet(packet: bytes):
 
-        return b64decode(packet)
+        return packet
 
     @staticmethod
     def encrypt_payload(payload: bytes):
-        return b64encode(payload)
+        return payload
 
     def default_packet_handler(self, packet):
 
@@ -95,10 +126,33 @@ class Connection:
                 logging.info("Machine Connection Verified successfully")
 
             elif data == b'DISCONNECTED':
+                print("Disconnect received")
                 logging.info("Machine has been disconnected")
+
+                # Informed by the client 
+                # So we don't need to inform 
+                # the client
+                self.kill(inform_client=False)
 
         elif self.PACKET_TYPES[packet_type] == 'AUDIO':
             Audio.play_audio(data)
 
         return packet
+
+    def kill(self, inform_client: bool = True):
+
+        self.__kill_switch = True
+        print("Kill Switch Set")
+
+        if inform_client:
+            print("Informing client...")
+            logging.debug("Informing Client")
+            self.send_message('DISCONNECTED', 0)
+
+            self.socket.close()
+
+    @property 
+    def killed(self):
+
+        return self.__kill_switch
 
