@@ -51,4 +51,5 @@ def main():
         elif opt in ('help', 'h'):
 
             print("Type 'call' to call, 'mute' to toggle microphone, 'send' to message")
+            print("Type 'view' or 'view_machines' to view connected machines")
 
