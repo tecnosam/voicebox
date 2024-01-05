@@ -22,7 +22,8 @@ class Connection:
     def __init__(
         self,
         client,
-        packet_handlers: list = []
+        packet_handlers: list = [],
+        encryption_pipeline: list = []
     ):
 
         self.socket: socket.socket = client
@@ -30,6 +31,8 @@ class Connection:
         self.__kill_switch = False
 
         self.on_hold = False
+
+        self.encryption_pipeline = encryption_pipeline
 
         self.packet_handlers = [self.default_packet_handler] + packet_handlers
 
@@ -96,13 +99,20 @@ class Connection:
             logging.debug("Connection reset while sending packet")
             self.kill(inform_client=False)
 
-    @staticmethod
-    def decrypt_packet(packet: bytes):
+    def decrypt_packet(self, packet: bytes):
+
+        for encryptor in self.encryption_pipeline:
+
+            packet = encryptor.decrypt(packet)
 
         return packet
 
-    @staticmethod
-    def encrypt_payload(payload: bytes):
+    def encrypt_payload(self, payload: bytes):
+
+        for encryptor in self.encryption_pipeline:
+
+            payload = encryptor.encrypt(payload)
+
         return payload
 
     def default_packet_handler(self, packet):
