@@ -45,7 +45,7 @@ class Connection:
             try:
 
                 if self.__kill_switch:
-                    print("Switch Has been killed!")
+                    logging.debug("Switch Has been killed!")
                     break
 
                 packet_size = self.socket.recv(self.INT_BYTE_SIZE)
@@ -126,7 +126,6 @@ class Connection:
                 logging.info("Machine Connection Verified successfully")
 
             elif data == b'DISCONNECTED':
-                print("Disconnect received")
                 logging.info("Machine has been disconnected")
 
                 # Informed by the client 
@@ -142,11 +141,11 @@ class Connection:
     def kill(self, inform_client: bool = True):
 
         self.__kill_switch = True
-        print("Kill Switch Set")
+        logging.debug("Kill Switch set")
 
         if inform_client:
-            print("Informing client...")
-            logging.debug("Informing Client")
+
+            logging.debug("Informing Client...")
             self.send_message('DISCONNECTED', 0)
 
             self.socket.close()

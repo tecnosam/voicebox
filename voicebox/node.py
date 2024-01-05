@@ -128,7 +128,9 @@ class Node:
             if connection.killed:
                 # We were informed by the connection
                 # So we don't need to inform the connection
-                print("Connection Killed while Broadcasting")
+                logging.info(
+                    f"Connection to {addr} Killed while Broadcasting"
+                )
                 self.end_call(addr, inform_connection=False)
                 continue
 
@@ -139,8 +141,6 @@ class Node:
         connection = self.connection_pool.pop(addr, None)
 
         if not addr:
-
-            print("Not Found!")
             logging.error(f"Cannot find Address {addr} in pool")
             return 
  
