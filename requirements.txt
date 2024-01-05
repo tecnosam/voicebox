@@ -1,0 +1,4 @@
+cffi==1.16.0
+cryptography==41.0.7
+PyAudio==0.2.14
+pycparser==2.21
