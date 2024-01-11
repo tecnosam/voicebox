@@ -1,15 +1,30 @@
 import logging
 
-from typing import Dict
+from typing import (
+    List,
+    Dict
+)
 
 from threading import Thread
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import (
+    ThreadPoolExecutor,
+    as_completed
+)
 
 import pyaudio
 
 from voicebox.connection import Connection
 from voicebox.audio import Audio
-from voicebox.utils import setup_server_socket, setup_client_socket
+
+from voicebox.encryption import (
+    BaseEncryptor,
+    RSAEncryptor
+)
+
+from voicebox.utils import (
+    setup_server_socket,
+    setup_client_socket
+)
 
 
 class MicrophoneStreamerThread:
@@ -60,9 +75,12 @@ class Node:
 
         self.port = port
         self.username = username
+        self.muted = False
+
+        self.__packet_handlers = []
+        self.__encryption_pipeline = [RSAEncryptor]
 
         self.connection_pool: Dict[str, Connection] = {}  # nodes user is connected to
-        self.muted = False
 
         self.socket = setup_server_socket(self.port)
 
@@ -76,7 +94,26 @@ class Node:
         self.muted = not self.muted
 
     def log(self, msg):
-        logging.info(f"{self.username}: {msg}")
+        logging.info(f"Message for {self.username}: {msg}")
+
+    def __initiate_connection(self, address, client):
+
+        self.connection_pool[address] = Connection(
+            client,
+            self.packet_handlers,
+            self.encryption_pipeline
+        )
+
+        if isinstance(self.__encryption_pipeline[0], RSAEncryptor):
+
+            # Send our RSA public key to our client 
+            # so they can send us messages
+            rsa_encryptor = self.__encryption_pipeline[0]
+
+            self.connection_pool[address].send_message(
+                rsa_encryptor.public_key,
+                RSAEncryptor.KEY_EXCHANGE_SIGNAL
+            )
 
     def listen(self):
         """Listen for new connections"""
@@ -90,8 +127,9 @@ class Node:
 
             if self.validate_connection(address_tuple):
                 address, _ = address_tuple
-                self.connection_pool[address] = Connection(client)
-                self.connection_pool[address].send_message("CONNECTION_SUCCESS", 0)
+
+                self.__initiate_connection(address, client)
+                self.connection_pool[address].send_message("SUCCESS", 0)
 
                 self.log(f"Received Connection from {address}")
             else:
@@ -105,8 +143,7 @@ class Node:
             logging.error(f"Node {self.username}: {host} is Unreachable")
             return
 
-        machine_connection = Connection(machine_socket)
-        self.connection_pool[host] = machine_connection
+        self.__initiate_connection(host, machine_socket)
 
     def broadcast_audio(self, audio_stream):
         if self.muted:
@@ -151,4 +188,21 @@ class Node:
     def validate_connection(address: str) -> bool:
 
         return bool(input("Would you like to connect to this client at {}? ".format(address)))
+
+    def append_encryptor(self, encryptor: BaseEncryptor):
+
+        if not isinstance(encryptor, BaseEncryptor):
+
+            raise ValueError("Encryptor must inherit from BaseEncryptor")
+
+        self.__encryption_pipeline.append(encryptor)
+
+    def reset_encryption_pipeline(self):
+
+        self.__encryption_pipeline = []
+
+    def set_encryption_pipeline(self, pipeline: List[BaseEncryptor]):
+
+        for encryptor in pipeline:
+            self.append_encryptor(encryptor)
 
