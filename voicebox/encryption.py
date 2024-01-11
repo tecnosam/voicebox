@@ -29,15 +29,27 @@ class RSAEncryptor(BaseEncryptor):
 
     __public_key = None
 
-    def __init__(self, client_public_pem: bytes):
+    KEY_EXCHANGE_SIGNAL = -101
 
-        self.client_public_key = self.convert_pem_to_key(client_public_pem)
+    def __init__(self, client_public_pem: bytes = None):
+
+        if client_public_pem
+            self.client_public_key = self.convert_pem_to_key(client_public_pem)
+        else:
+            self.client_public_key = None
 
     def encrypt(self, payload: bytes):
         """
             We'd like to encrypt messages in the client's
             public key so they can decrypt it
         """
+
+        # for the sake of key exchange,
+        # We don't want to encrypt When
+        # We haven't officially generated
+        # a private key
+        if not self.__private_key:
+            return payload
 
         return self.client_public_key.encrypt(
             payload,
@@ -52,10 +64,26 @@ class RSAEncryptor(BaseEncryptor):
             with our private key
         """
 
+        if not self.client_public_key:
+
+            return packet
+
         return self._private_key.decrypt(
             packet,
             self.padding
         )
+
+    def packet_handler(self, packet: bytes):
+
+        delimeter = 4
+
+        packet_type, data = packet[:delimeter], packet[delimeter:]
+
+        if packet_type == self.KEY_EXCHANGE_SIGNAL:
+
+            self.client_public_key = self.convert_pem_to_key(pem)
+
+        return packet
 
     @classmethod
     def convert_pem_to_key(cls, pem: bytes):
