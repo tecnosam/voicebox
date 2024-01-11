@@ -107,7 +107,24 @@ class Node:
             encryption_pipeline=encryption_pipeline
         )
 
+        self.perform_key_exchange(address)
+
         self.connection_pool[address].send_message("SUCCESS", 0)
+
+    def perform_key_exchange(self, address):
+
+        encryption_pipeline = self.connection_pool[address]
+
+        for encryptor in encryption_pipeline:
+
+            pem = encryptor.public_pem
+
+            if pem is not None:
+
+                self.connection_pool[address].send_message(
+                    pem,
+                    encryptor.KEY_EXCHANGE_SIGNAL
+                )
 
     def listen(self):
         """Listen for new connections"""

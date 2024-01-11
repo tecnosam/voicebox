@@ -6,6 +6,8 @@ from cryptography.hazmat.backends import default_backend
 
 class BaseEncryptor:
 
+    KEY_EXCHANGE_SIGNAL = -104
+
     def __init__(self, *args, **kwargs):
 
         raise NotImplementedError("Cannot Initialize from BaseEncryptor")
@@ -21,6 +23,16 @@ class BaseEncryptor:
     def hash(self, payload):
 
         raise NotImplementedError()
+
+    def packet_handler(self, packet):
+
+        return packet
+
+    @classmethod
+    @property
+    def public_pem(cls):
+
+        return None
 
 
 class RSAEncryptor(BaseEncryptor):
@@ -44,11 +56,13 @@ class RSAEncryptor(BaseEncryptor):
             public key so they can decrypt it
         """
 
-        # for the sake of key exchange,
-        # We don't want to encrypt When
-        # We haven't officially generated
-        # a private key
         if not self.__private_key:
+            return payload
+
+        # If we are transmitting our public 
+        # Key, we don't need to encrypr ir
+        # for the sake of key exchange
+        if payload == self.public_pem:
             return payload
 
         return self.client_public_key.encrypt(
