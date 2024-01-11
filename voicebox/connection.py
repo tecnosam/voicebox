@@ -30,7 +30,7 @@ class Connection:
 
         self.__kill_switch = False
 
-        self.on_hold = False
+        self.on_hold = True
 
         self.encryption_pipeline = encryption_pipeline
 
@@ -130,6 +130,9 @@ class Connection:
 
         elif self.PACKET_TYPES[packet_type] == 'CONNECTION':
             if data == b'SUCCESS':
+
+                self.on_hold = False
+
                 logging.info("Machines Connected successfully")
 
             elif data == b'IS_ALIVE':
