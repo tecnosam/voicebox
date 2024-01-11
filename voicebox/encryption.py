@@ -45,7 +45,7 @@ class RSAEncryptor(BaseEncryptor):
 
     def __init__(self, client_public_pem: bytes = None):
 
-        if client_public_pem
+        if client_public_pem:
             self.client_public_key = self.convert_pem_to_key(client_public_pem)
         else:
             self.client_public_key = None
