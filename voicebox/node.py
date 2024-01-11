@@ -11,6 +11,11 @@ from voicebox.connection import Connection
 from voicebox.audio import Audio
 from voicebox.utils import setup_server_socket, setup_client_socket
 
+from voicebox.encryption import (
+    BaseEncryptor,
+    RSAEncryptor
+)
+
 
 class MicrophoneStreamerThread:
 
@@ -61,6 +66,8 @@ class Node:
         self.port = port
         self.username = username
 
+        self.encryption_pipeline = [RSAEncryptor]
+
         self.connection_pool: Dict[str, Connection] = {}  # nodes user is connected to
         self.muted = False
 
@@ -78,6 +85,30 @@ class Node:
     def log(self, msg):
         logging.info(f"{self.username}: {msg}")
 
+    def add_new_connection(
+        self,
+        address,
+        machine_socket,
+    ):
+
+        encryption_pipeline = [
+            encryptor()
+            for encryptor in self.encryption_pipeline
+        ]
+
+        encryption_packet_handlers = [
+            encryptor.packet_handler
+            for encryptor in encryption_pipeline
+        ]
+
+        self.connection_pool[address] = Connection(
+            machine_socket,
+            packet_handlers=encryption_packet_handlers,
+            encryption_pipeline=encryption_pipeline
+        )
+
+        self.connection_pool[address].send_message("SUCCESS", 0)
+
     def listen(self):
         """Listen for new connections"""
 
@@ -90,8 +121,8 @@ class Node:
 
             if self.validate_connection(address_tuple):
                 address, _ = address_tuple
-                self.connection_pool[address] = Connection(client)
-                self.connection_pool[address].send_message("CONNECTION_SUCCESS", 0)
+
+                self.add_new_connection(address, client)
 
                 self.log(f"Received Connection from {address}")
             else:
@@ -105,8 +136,7 @@ class Node:
             logging.error(f"Node {self.username}: {host} is Unreachable")
             return
 
-        machine_connection = Connection(machine_socket)
-        self.connection_pool[host] = machine_connection
+        self.add_new_connection(host, machine_socket)
 
     def broadcast_audio(self, audio_stream):
         if self.muted:
