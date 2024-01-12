@@ -1,6 +1,6 @@
 import logging
 
-from typing import Dict
+from typing import Dict, List
 
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -66,7 +66,9 @@ class Node:
         self.port = port
         self.username = username
 
-        self.encryption_pipeline = [RSAEncryptor]
+        self.__encryption_pipeline: List[BaseEncryptor] = [
+            RSAEncryptor,
+        ]
 
         self.connection_pool: Dict[str, Connection] = {}  # nodes user is connected to
         self.muted = False
@@ -200,4 +202,28 @@ class Node:
         return True
 
         # return bool(input("Would you like to connect to this client at {}? ".format(address)))
+
+    @property
+    def encryption_pipeline(self) -> List[BaseEncryptor]:
+
+        return self.__encryption_pipeline
+
+    @encryption_pipeline.setter
+    def encryption_pipeline(
+        self,
+        encryption_pipeline: List[BaseEncryptor]
+    ):
+        for encryptor in encryption_pipeline:
+
+            self.append_to_encryption_pipeline(encryptor)
+
+    def append_to_encryption_pipeline(self, encryptor: BaseEncryptor):
+
+        if not isinstance(encryptor, type(BaseEncryptor)):
+
+            raise ValueError(
+                "Encryptor must extend from BaseEncryptor"
+            )
+
+        self.__encryption_pipeline.append(encryptor)
 
