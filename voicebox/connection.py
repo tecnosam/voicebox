@@ -108,7 +108,6 @@ class Connection:
 
             packet = encryptor.decrypt(packet)
 
-        print("\n\n", packet)
         return packet
 
     def encrypt_payload(self, payload: bytes):
@@ -117,7 +116,6 @@ class Connection:
         for encryptor in self.encryption_pipeline:
 
             payload = encryptor.encrypt(payload)
-            print(f"payload length after encryption - {len(payload)}")
 
         return payload
 
