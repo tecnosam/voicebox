@@ -48,15 +48,14 @@ class RSAEncryptor(BaseEncryptor):
 
     KEY_SIZE = 2048
 
-    __private_key = None
-
-    __public_key = None
-
     INT_BYTE_SIZE = 4
 
     KEY_EXCHANGE_SIGNAL = 901
 
     def __init__(self, client_public_pem: bytes = None):
+
+        self.__private_key = None
+        self.__public_key = None
 
         if client_public_pem:
             self.client_public_key = self.convert_pem_to_key(client_public_pem)
@@ -195,43 +194,40 @@ class RSAEncryptor(BaseEncryptor):
             label=None
         )
 
-    @classmethod
     @property
-    def _private_key(cls):
+    def _private_key(self):
 
-        if not cls.__private_key:
+        if not self.__private_key:
 
             private_key = rsa.generate_private_key(
                 public_exponent=65537,
-                key_size=cls.KEY_SIZE,
+                key_size=self.KEY_SIZE,
                 backend=default_backend()
             )
 
-            cls.__private_key = private_key
+            self.__private_key = private_key
 
-        return cls.__private_key
+        return self.__private_key
 
-    @classmethod
     @property 
-    def public_key(cls):
+    def public_key(self):
 
-        if not cls.__public_key:
+        if not self.__public_key:
 
-            private_key = cls._private_key
+            private_key = self._private_key
 
-            cls.__public_key = private_key.public_key()
+            self.__public_key = private_key.public_key()
 
-        return cls.__public_key
+        return self.__public_key
 
-    @classmethod 
     @property 
-    def public_pem(cls) -> bytes:
+    def public_pem(self) -> bytes:
         """
             The public pem is what we send to the client
             on the other end.
         """
 
-        pem = cls.public_key.public_bytes(
+        pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
