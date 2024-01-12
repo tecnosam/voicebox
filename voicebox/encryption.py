@@ -1,8 +1,15 @@
 import logging
 
+import secrets
+
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.ciphers import (
+    Cipher,
+    algorithms,
+    modes
+)
 from cryptography.hazmat.backends import default_backend
 
 
@@ -39,6 +46,8 @@ class BaseEncryptor:
 
 class RSAEncryptor(BaseEncryptor):
 
+    KEY_SIZE = 2048
+
     __private_key = None
 
     __public_key = None
@@ -54,6 +63,42 @@ class RSAEncryptor(BaseEncryptor):
         else:
             self.client_public_key = None
 
+    def symmetric_encrypt(self, packet: bytes):
+
+        sym_key = secrets.token_bytes(32)
+
+        counter = 0
+        nonce = counter.to_bytes(16, 'big')
+
+        cipher = Cipher(
+            algorithms.AES(sym_key),
+            modes.CTR(nonce),
+            backend=default_backend()
+        )
+
+        encryptor = cipher.encryptor()
+
+        ciphertext = encryptor.update(packet) + encryptor.finalize()
+
+        return sym_key, ciphertext
+
+    def symmetric_decrypt(self, ciphertext: bytes, key: bytes):
+
+        counter = 0
+        nonce = counter.to_bytes(16, 'big')
+
+        cipher = Cipher(
+            algorithms.AES(key),
+            modes.CTR(nonce),
+            backend=default_backend()
+        )
+
+        decryptor = cipher.decryptor()
+
+        data = decryptor.update(ciphertext) + decryptor.finalize()
+
+        return data
+
     def encrypt(self, payload: bytes):
         """
             We'd like to encrypt messages in the client's
@@ -66,16 +111,20 @@ class RSAEncryptor(BaseEncryptor):
         # If we are transmitting our public 
         # Key, we don't need to encrypr ir
         # for the sake of key exchange
-        if payload[self.INT_BYTE_SIZE:] == self.public_pem:
-            return payload
+        #if payload[self.INT_BYTE_SIZE:] == self.public_pem:
+        #    return payload
 
-        if len(payload) < 1000:
-            print(payload, self.public_pem, payload == self.public_pem)
-            print(f"\n\n Encrypting {len(payload)} with {self.client_public_key}\n\n")
-        return self.client_public_key.encrypt(
-            payload,
+        sym_key, ciphertext = self.symmetric_encrypt(payload)
+
+        encrypted_key = self.client_public_key.encrypt(
+            sym_key,
             self.padding
         )
+
+        keylen = len(encrypted_key)
+        header = keylen.to_bytes(self.INT_BYTE_SIZE, byteorder='big')
+
+        return header + encrypted_key + ciphertext
 
     def decrypt(self, packet: bytes):
 
@@ -86,6 +135,7 @@ class RSAEncryptor(BaseEncryptor):
         """
 
         try:
+            print(packet)
             # If we don't have a private key, 
             # There's no way the client has a
             # public key
@@ -94,13 +144,23 @@ class RSAEncryptor(BaseEncryptor):
 
             logging.debug("Decrypting packet with RSA algorithm")
 
-            return self._private_key.decrypt(
-                packet,
+            keylen = int.from_bytes(packet[:self.INT_BYTE_SIZE], byteorder='big')
+
+            key = packet[self.INT_BYTE_SIZE:keylen+self.INT_BYTE_SIZE]
+            ciphertext = packet[keylen+self.INT_BYTE_SIZE:]
+
+            sym_key = self._private_key.decrypt(
+                key,
                 self.padding
             )
-        except ValueError:
 
-            logging.error("Warning:Unable to decrypt packet!")
+            return self.symmetric_decrypt(ciphertext, sym_key)
+
+        except ValueError as exc:
+
+            logging.error(
+                f"Warning:Unable to decrypt packet! {str(exc)}"
+            )
             return packet
 
     def packet_handler(self, packet: bytes):
@@ -110,8 +170,6 @@ class RSAEncryptor(BaseEncryptor):
         packet_type, data = packet[:delimeter], packet[delimeter:]
 
         packet_type = int.from_bytes(packet_type, 'big')
-
-        logging.debug(f"{packet_type}- {self.KEY_EXCHANGE_SIGNAL}received")
 
         if packet_type == self.KEY_EXCHANGE_SIGNAL:
 
@@ -146,7 +204,7 @@ class RSAEncryptor(BaseEncryptor):
 
             private_key = rsa.generate_private_key(
                 public_exponent=65537,
-                key_size=2048,
+                key_size=cls.KEY_SIZE,
                 backend=default_backend()
             )
 
