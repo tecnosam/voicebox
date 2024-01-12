@@ -1,6 +1,6 @@
 import logging
 
-from typing import Dict
+from typing import Dict, List, Type
 
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -10,6 +10,11 @@ import pyaudio
 from voicebox.connection import Connection
 from voicebox.audio import Audio
 from voicebox.utils import setup_server_socket, setup_client_socket
+
+from voicebox.encryption import (
+    BaseEncryptor,
+    RSAEncryptor
+)
 
 
 class MicrophoneStreamerThread:
@@ -32,11 +37,11 @@ class MicrophoneStreamerThread:
             futures = []
             for node in Node.nodes:
 
-                # node.broadcast_audio(in_data)
-                futures.append(MicrophoneStreamerThread.pool.submit(
-                    node.broadcast_audio,
-                    in_data
-                ))
+                node.broadcast_audio(in_data)
+                #futures.append(MicrophoneStreamerThread.pool.submit(
+                #    node.broadcast_audio,
+                #    in_data
+                #))
 
             for future in as_completed(futures):
 
@@ -61,6 +66,10 @@ class Node:
         self.port = port
         self.username = username
 
+        self.__encryption_pipeline: List[Type[BaseEncryptor]] = [
+            RSAEncryptor,
+        ]
+
         self.connection_pool: Dict[str, Connection] = {}  # nodes user is connected to
         self.muted = False
 
@@ -78,6 +87,47 @@ class Node:
     def log(self, msg):
         logging.info(f"{self.username}: {msg}")
 
+    def add_new_connection(
+        self,
+        address,
+        machine_socket,
+    ):
+
+        encryption_pipeline: List[BaseEncryptor] = [
+            encryptor()
+            for encryptor in self.encryption_pipeline
+        ]
+
+        encryption_packet_handlers = [
+            encryptor.packet_handler
+            for encryptor in encryption_pipeline
+        ]
+
+        self.connection_pool[address] = Connection(
+            machine_socket,
+            packet_handlers=encryption_packet_handlers,
+            encryption_pipeline=encryption_pipeline
+        )
+
+        self.perform_key_exchange(address)
+
+        self.connection_pool[address].send_message("SUCCESS", 0)
+
+    def perform_key_exchange(self, address):
+
+        encryption_pipeline = self.connection_pool[address].encryption_pipeline
+
+        for encryptor in encryption_pipeline:
+
+            pem = encryptor.public_pem
+
+            if pem is not None:
+
+                self.connection_pool[address].send_message(
+                    pem,
+                    encryptor.KEY_EXCHANGE_SIGNAL
+                )
+
     def listen(self):
         """Listen for new connections"""
 
@@ -90,8 +140,8 @@ class Node:
 
             if self.validate_connection(address_tuple):
                 address, _ = address_tuple
-                self.connection_pool[address] = Connection(client)
-                self.connection_pool[address].send_message("CONNECTION_SUCCESS", 0)
+
+                self.add_new_connection(address, client)
 
                 self.log(f"Received Connection from {address}")
             else:
@@ -105,8 +155,7 @@ class Node:
             logging.error(f"Node {self.username}: {host} is Unreachable")
             return
 
-        machine_connection = Connection(machine_socket)
-        self.connection_pool[host] = machine_connection
+        self.add_new_connection(host, machine_socket)
 
     def broadcast_audio(self, audio_stream):
         if self.muted:
@@ -150,5 +199,31 @@ class Node:
     @staticmethod
     def validate_connection(address: str) -> bool:
 
-        return bool(input("Would you like to connect to this client at {}? ".format(address)))
+        return True
+
+        # return bool(input("Would you like to connect to this client at {}? ".format(address)))
+
+    @property
+    def encryption_pipeline(self) -> List[BaseEncryptor]:
+
+        return self.__encryption_pipeline
+
+    @encryption_pipeline.setter
+    def encryption_pipeline(
+        self,
+        encryption_pipeline: List[BaseEncryptor]
+    ):
+        for encryptor in encryption_pipeline:
+
+            self.append_to_encryption_pipeline(encryptor)
+
+    def append_to_encryption_pipeline(self, encryptor: BaseEncryptor):
+
+        if not isinstance(encryptor, type(BaseEncryptor)):
+
+            raise ValueError(
+                "Encryptor must extend from BaseEncryptor"
+            )
+
+        self.__encryption_pipeline.append(encryptor)
 
