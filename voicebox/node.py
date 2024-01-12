@@ -170,7 +170,6 @@ class Node:
                 continue
 
             if connection.on_hold:
-                print("No Audio! On hold")
                 continue
 
             if connection.killed:

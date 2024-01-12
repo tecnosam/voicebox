@@ -86,15 +86,12 @@ class Connection:
             packet_size = len(encrypted_payload)
             size = int.to_bytes(packet_size, self.INT_BYTE_SIZE, "big")
 
-            print(packet_size, size)
-
             self.socket.send(size)
             self.socket.send(encrypted_payload)
 
             return "Done"
         except BrokenPipeError:
 
-            print("Broken Pipe")
             logging.error("Socket No longer usable: Adviced to kill connection")
 
         except ConnectionResetError:
@@ -112,7 +109,6 @@ class Connection:
 
     def encrypt_payload(self, payload: bytes):
 
-        print(len(payload), self.encryption_pipeline)
         for encryptor in self.encryption_pipeline:
 
             payload = encryptor.encrypt(payload)

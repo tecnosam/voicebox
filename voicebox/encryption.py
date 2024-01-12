@@ -135,7 +135,6 @@ class RSAEncryptor(BaseEncryptor):
         """
 
         try:
-            print(packet)
             # If we don't have a private key, 
             # There's no way the client has a
             # public key
