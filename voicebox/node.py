@@ -1,6 +1,6 @@
 import logging
 
-from typing import Dict, List
+from typing import Dict, List, Type
 
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -66,7 +66,7 @@ class Node:
         self.port = port
         self.username = username
 
-        self.__encryption_pipeline: List[BaseEncryptor] = [
+        self.__encryption_pipeline: List[Type[BaseEncryptor]] = [
             RSAEncryptor,
         ]
 
@@ -93,7 +93,7 @@ class Node:
         machine_socket,
     ):
 
-        encryption_pipeline = [
+        encryption_pipeline: List[BaseEncryptor] = [
             encryptor()
             for encryptor in self.encryption_pipeline
         ]
