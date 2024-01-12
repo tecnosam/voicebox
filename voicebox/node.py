@@ -37,11 +37,11 @@ class MicrophoneStreamerThread:
             futures = []
             for node in Node.nodes:
 
-                # node.broadcast_audio(in_data)
-                futures.append(MicrophoneStreamerThread.pool.submit(
-                    node.broadcast_audio,
-                    in_data
-                ))
+                node.broadcast_audio(in_data)
+                #futures.append(MicrophoneStreamerThread.pool.submit(
+                #    node.broadcast_audio,
+                #    in_data
+                #))
 
             for future in as_completed(futures):
 
@@ -113,7 +113,7 @@ class Node:
 
     def perform_key_exchange(self, address):
 
-        encryption_pipeline = self.connection_pool[address]
+        encryption_pipeline = self.connection_pool[address].encryption_pipeline
 
         for encryptor in encryption_pipeline:
 
@@ -170,6 +170,7 @@ class Node:
                 continue
 
             if connection.on_hold:
+                print("No Audio! On hold")
                 continue
 
             if connection.killed:
@@ -197,5 +198,7 @@ class Node:
     @staticmethod
     def validate_connection(address: str) -> bool:
 
-        return bool(input("Would you like to connect to this client at {}? ".format(address)))
+        return True
+
+        # return bool(input("Would you like to connect to this client at {}? ".format(address)))
 

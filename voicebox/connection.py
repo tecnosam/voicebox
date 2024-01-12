@@ -22,8 +22,8 @@ class Connection:
     def __init__(
         self,
         client,
-        packet_handlers: list = [],
-        encryption_pipeline: list = []
+        packet_handlers: list,
+        encryption_pipeline: list
     ):
 
         self.socket: socket.socket = client
@@ -86,12 +86,15 @@ class Connection:
             packet_size = len(encrypted_payload)
             size = int.to_bytes(packet_size, self.INT_BYTE_SIZE, "big")
 
+            print(packet_size, size)
+
             self.socket.send(size)
             self.socket.send(encrypted_payload)
 
             return "Done"
         except BrokenPipeError:
 
+            print("Broken Pipe")
             logging.error("Socket No longer usable: Adviced to kill connection")
 
         except ConnectionResetError:
@@ -105,13 +108,16 @@ class Connection:
 
             packet = encryptor.decrypt(packet)
 
+        print("\n\n", packet)
         return packet
 
     def encrypt_payload(self, payload: bytes):
 
+        print(len(payload), self.encryption_pipeline)
         for encryptor in self.encryption_pipeline:
 
             payload = encryptor.encrypt(payload)
+            print(f"payload length after encryption - {len(payload)}")
 
         return payload
 

@@ -1,12 +1,14 @@
+import logging
+
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 
 
 class BaseEncryptor:
 
-    KEY_EXCHANGE_SIGNAL = -104
+    KEY_EXCHANGE_SIGNAL = 900
 
     def __init__(self, *args, **kwargs):
 
@@ -41,7 +43,9 @@ class RSAEncryptor(BaseEncryptor):
 
     __public_key = None
 
-    KEY_EXCHANGE_SIGNAL = -101
+    INT_BYTE_SIZE = 4
+
+    KEY_EXCHANGE_SIGNAL = 901
 
     def __init__(self, client_public_pem: bytes = None):
 
@@ -56,15 +60,18 @@ class RSAEncryptor(BaseEncryptor):
             public key so they can decrypt it
         """
 
-        if not self.__private_key:
+        if not self.client_public_key:
             return payload
 
         # If we are transmitting our public 
         # Key, we don't need to encrypr ir
         # for the sake of key exchange
-        if payload == self.public_pem:
+        if payload[self.INT_BYTE_SIZE:] == self.public_pem:
             return payload
 
+        if len(payload) < 1000:
+            print(payload, self.public_pem, payload == self.public_pem)
+            print(f"\n\n Encrypting {len(payload)} with {self.client_public_key}\n\n")
         return self.client_public_key.encrypt(
             payload,
             self.padding
@@ -78,24 +85,38 @@ class RSAEncryptor(BaseEncryptor):
             with our private key
         """
 
-        if not self.client_public_key:
+        try:
+            # If we don't have a private key, 
+            # There's no way the client has a
+            # public key
+            if not self.__private_key:
+                return packet
 
+            logging.debug("Decrypting packet with RSA algorithm")
+
+            return self._private_key.decrypt(
+                packet,
+                self.padding
+            )
+        except ValueError:
+
+            logging.error("Warning:Unable to decrypt packet!")
             return packet
-
-        return self._private_key.decrypt(
-            packet,
-            self.padding
-        )
 
     def packet_handler(self, packet: bytes):
 
-        delimeter = 4
+        delimeter = self.INT_BYTE_SIZE
 
         packet_type, data = packet[:delimeter], packet[delimeter:]
 
+        packet_type = int.from_bytes(packet_type, 'big')
+
+        logging.debug(f"{packet_type}- {self.KEY_EXCHANGE_SIGNAL}received")
+
         if packet_type == self.KEY_EXCHANGE_SIGNAL:
 
-            self.client_public_key = self.convert_pem_to_key(pem)
+            self.client_public_key = self.convert_pem_to_key(data)
+            logging.info(f"Received Client's public key {self.client_public_key}!")
 
         return packet
 
@@ -147,15 +168,16 @@ class RSAEncryptor(BaseEncryptor):
 
     @classmethod 
     @property 
-    def public_pem(cls):
+    def public_pem(cls) -> bytes:
         """
             The public pem is what we send to the client
             on the other end.
         """
 
-        return cls.public_key.public_bytes(
+        pem = cls.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
+
+        return pem
 
