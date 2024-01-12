@@ -67,8 +67,7 @@ class RSAEncryptor(BaseEncryptor):
 
         sym_key = secrets.token_bytes(32)
 
-        counter = 0
-        nonce = counter.to_bytes(16, 'big')
+        nonce = secrets.token_bytes(16)
 
         cipher = Cipher(
             algorithms.AES(sym_key),
@@ -80,12 +79,13 @@ class RSAEncryptor(BaseEncryptor):
 
         ciphertext = encryptor.update(packet) + encryptor.finalize()
 
+        sym_key = nonce + sym_key
+
         return sym_key, ciphertext
 
     def symmetric_decrypt(self, ciphertext: bytes, key: bytes):
 
-        counter = 0
-        nonce = counter.to_bytes(16, 'big')
+        nonce, key = key[:16], key[16:]
 
         cipher = Cipher(
             algorithms.AES(key),
