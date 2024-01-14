@@ -1,5 +1,5 @@
 import logging
-
+import argparse
 from voicebox.node import Node, MicrophoneStreamerThread
 
 from voicebox.utils import extract_ip
@@ -20,11 +20,14 @@ def main():
     provides a command line interface for interracting
     with the voicebox APIs.
     """
+    
+    parser = argparse.ArgumentParser(description='Voicebox')
+    parser.add_argument('--port', required=True, type=int, help='Input port number')
+    args = parser.parse_args()
 
     username = input("Username: ")
-
     ip = extract_ip()
-    port = 4000
+    port = args.port
 
     while True:
         try:
