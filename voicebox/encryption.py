@@ -73,6 +73,8 @@ class BaseEncryptor:
     def packet_handler(self, packet):
         """
         Default packet handler that returns the packet unchanged.
+        When an Encryptor is added to a Connection, this method
+        is to be registered as part of the packet_handlers
 
         Args:
             packet: The packet to be handled.

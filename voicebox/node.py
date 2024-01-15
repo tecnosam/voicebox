@@ -135,6 +135,8 @@ class Node:
     ):
         """
         Adds a new connection to the node.
+        Also initializes the encryption pipeline
+        and starts the key exchange process.
 
         Args:
             address: The address of the new connection.
@@ -203,6 +205,9 @@ class Node:
         """
         Connects to a machine with the specified host and port.
 
+        Called when the Node wants to call another Node in the
+        network.
+
         Args:
             host (str): The host to connect to.
             port (int): The port to connect to.
@@ -257,6 +262,9 @@ class Node:
     def end_call(self, addr: str, inform_connection: bool = True):
         """
         Ends a call with a connected node.
+
+        Removes the connection from our connection pool and
+        kills the connection.
 
         Args:
             addr: The address of the connected node.
