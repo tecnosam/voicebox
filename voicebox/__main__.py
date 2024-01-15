@@ -6,7 +6,7 @@ from voicebox.utils import extract_ip
 
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s %(name)s %(levelname)-8s  %(message)s',
     datefmt='(%H:%M:%S)'
 )
@@ -14,10 +14,17 @@ logging.basicConfig(
 
 def main():
 
-    
+    """
+    Main function to start system
+
+    provides a command line interface for interracting
+    with the voicebox APIs.
+    """
+
     parser = argparse.ArgumentParser(description='Voicebox')
     parser.add_argument('--port', required=True, type=int, help='Input port number')
     args = parser.parse_args()
+
     username = input("Username: ")
     ip = extract_ip()
     port = args.port
@@ -67,7 +74,7 @@ def main():
         elif opt in ('toggle_mute', 'mute'):
             MicrophoneStreamerThread.MUTED = not MicrophoneStreamerThread.MUTED
             node.toggle_mute()
-            
+
             print("Muted State: ", MicrophoneStreamerThread.MUTED)
             print("Node Muted State: ", node.muted)
 
@@ -79,4 +86,3 @@ def main():
 
             print("Type 'call' to call, 'mute' to toggle microphone, 'send' to message")
             print("Type 'view' or 'view_machines' to view connected machines")
-
