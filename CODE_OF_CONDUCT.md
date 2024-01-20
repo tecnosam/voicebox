@@ -38,7 +38,7 @@ If a participant engages in unacceptable behavior, the project maintainer may ta
 
 ## Reporting Guidelines
 
-If you are subject to or witness unacceptable behavior, or have any other concerns, please contact the project maintainer, Samuel Ikaba, at [ikabolo59@gmail.com]. All reports will be kept confidential.
+If you are subject to or witness unacceptable behavior, or have any other concerns, please contact the project maintainer, Samuel Abolo, at [ikabolo59@gmail.com]. All reports will be kept confidential.
 
 ## Addressing Grievances
 
