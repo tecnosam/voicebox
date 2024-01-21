@@ -148,7 +148,6 @@ class Node:
                 client.close()
 
     def connect_to_machine(self, host: str, port: int):
-
         machine_socket = setup_client_socket(host, port)
 
         if machine_socket is None:
