@@ -1,9 +1,9 @@
 import logging
 import argparse
-import asyncio
+from kademlia.network import Server
 from voicebox.node import Node, MicrophoneStreamerThread
 from voicebox.utils import extract_ip
-from kademlia.network import Server
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,10 +24,9 @@ async def run(port, bootstrap_ip=None, bootstrap_port=None):
 async def setusername(username, ip, port):
     result = await server.get(username)
     if result is not None:
-        return False
-    else:
-        await server.set(username, ip + ":" + str(port))
-        return True
+        return False    
+    await server.set(username, ip + ":" + str(port))
+    return True
     
 async def getusername(username):
     result = await server.get(username)
