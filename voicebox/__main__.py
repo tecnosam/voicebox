@@ -6,7 +6,7 @@ from voicebox.utils import extract_ip
 from kademlia.network import Server
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s %(name)s %(levelname)-8s  %(message)s',
     datefmt='(%H:%M:%S)'
 )
@@ -101,7 +101,7 @@ async def main():
         elif opt in ('toggle_mute', 'mute'):
             MicrophoneStreamerThread.MUTED = not MicrophoneStreamerThread.MUTED
             node.toggle_mute()
-            
+
             print("Muted State: ", MicrophoneStreamerThread.MUTED)
             print("Node Muted State: ", node.muted)
 
@@ -113,4 +113,3 @@ async def main():
 
             print("Type 'call' to call, 'mute' to toggle microphone, 'send' to message")
             print("Type 'view' or 'view_machines' to view connected machines")
-

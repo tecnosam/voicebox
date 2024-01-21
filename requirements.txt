@@ -1,4 +1,15 @@
+astroid==3.0.2
 cffi==1.16.0
 cryptography==41.0.7
+dill==0.3.7
+isort==5.13.2
+mccabe==0.7.0
+platformdirs==4.1.0
 PyAudio==0.2.14
 pycparser==2.21
+pydocstyle==6.3.0
+pylint==3.0.3
+snowballstemmer==2.2.0
+tomli==2.0.1
+tomlkit==0.12.3
+typing_extensions==4.9.0
