@@ -13,3 +13,4 @@ snowballstemmer==2.2.0
 tomli==2.0.1
 tomlkit==0.12.3
 typing_extensions==4.9.0
+kademlia==2.2.2
