@@ -72,7 +72,7 @@ class NamrClient:
             a username.
         """
 
-        payload = f"GET\x00{username}"
+        payload = f"G{username}"
 
         conn_info = cls.__send_namr_request(server, payload)
 
@@ -94,11 +94,11 @@ class NamrClient:
                 bool: False if the username is already taken
         """
 
-        payload = f"SET\x00{username}\x00{conn_info}"
+        payload = f"S{username} {conn_info}"
 
         status: bytes = cls.__send_namr_request(server, payload)
 
-        return bool.from_bytes(status, 'big')
+        return bool.from_bytes(status, 'little')
 
     @classmethod
     def __send_namr_request(cls, namr_server: str, payload: bytes) -> bytes:
@@ -114,16 +114,11 @@ class NamrClient:
         ip, port = namr_server.split(':')
         socket = setup_client_socket(ip, port)
 
-        # Get size of payload and store as 64-bit byte
-        size_byte = int.to_bytes(len(payload), 64, 'big')
-
         # Send request
-        socket.send(size_byte)
         socket.send(payload)
 
         # receive response
-        response_size = int.from_bytes(socket.recv(64), 'big')
-        response = socket.recv(response_size)
+        response = socket.recv(1024)
 
         socket.close()
 
