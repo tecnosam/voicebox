@@ -106,7 +106,7 @@ class Node:
             username
         )
 
-        # Check username in Namr Server 
+        # Check username in Namr Server
         client = list(NamrClient.get_user(username))
 
         if client:
@@ -123,7 +123,7 @@ class Node:
         instance = super().__new__(cls)
 
         ip = extract_ip()
-        response = NamrClient.set_username(username, f"{ip}:{port}")
+        NamrClient.set_username(username, f"{ip}:{port}")
 
         # Finally return the created instance
         return instance

@@ -19,7 +19,7 @@ class NamrClient:
 
     namr_servers: List[str] = ["127.0.0.1:9929"]
 
-    @classmethod 
+    @classmethod
     def get_user(cls, username: str) -> List[str]:
         """
             Searches different Namr servers for a username.
