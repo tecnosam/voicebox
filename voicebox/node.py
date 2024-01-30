@@ -8,11 +8,19 @@ import pyaudio
 
 from voicebox.connection import Connection
 from voicebox.audio import Audio
-from voicebox.utils import setup_server_socket, setup_client_socket
+from voicebox.utils import (
+    setup_server_socket,
+    setup_client_socket,
+    extract_ip
+)
 
 from voicebox.encryption import (
     BaseEncryptor,
     RSAEncryptor
+)
+
+from voicebox.namr_client import (
+    NamrClient
 )
 
 
@@ -87,7 +95,44 @@ class Node:
     """
     nodes = []
 
-    def __init__(self, username: str, port: int = 4000):
+    def __new__(cls, username: str, port: int):
+        """
+            Overloading __new__ so we can check if the
+            username is already taken
+        """
+
+        logging.debug(
+            "Checking username %s against Naming systems...",
+            username
+        )
+
+        # Check username in Namr Server 
+        client = list(NamrClient.get_user(username))
+
+        if client:
+            logging.error("username already taken by %s", client[0])
+
+            raise ValueError("username is taken")
+
+        # Check username in DHT
+
+        # create the Node instance
+        # We make sure the instance is created
+        # first before registering the username
+        # in namr or DHT
+        instance = super().__new__(cls)
+
+        ip = extract_ip()
+        response = NamrClient.set_username(username, f"{ip}:{port}")
+
+        # Finally return the created instance
+        return instance
+
+    def __init__(
+        self,
+        username: str,
+        port: int = 4000
+    ):
         """
         Initializes a Node instance.
 
