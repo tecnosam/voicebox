@@ -17,7 +17,7 @@ class NamrClient:
         information associated with a particular username
     """
 
-    namr_server: str
+    namr_servers: List[str] = ["127.0.0.1:9929"]
 
     @classmethod 
     def get_user(cls, username: str) -> List[str]:
@@ -33,7 +33,7 @@ class NamrClient:
 
         for server in cls.namr_servers:
 
-            conn_info = get_user_from_server(server, username)
+            conn_info = cls.get_user_from_server(server, username)
 
             if not conn_info:
                 continue
@@ -54,7 +54,7 @@ class NamrClient:
 
         for server in cls.namr_servers:
 
-            status = set_username_in_server(username, conn_info)
+            status = cls.set_username_in_server(server, username, conn_info)
             if status:
                 break
 
@@ -72,9 +72,15 @@ class NamrClient:
             a username.
         """
 
+        if not username:
+            raise ValueError("Username cannot be null")
+
         payload = f"G{username}"
 
-        conn_info = cls.__send_namr_request(server, payload)
+        conn_info = cls.__send_namr_request(
+            server,
+            payload.encode('utf-8')
+        )
 
         return conn_info.decode('utf-8')
 
@@ -96,7 +102,10 @@ class NamrClient:
 
         payload = f"S{username} {conn_info}"
 
-        status: bytes = cls.__send_namr_request(server, payload)
+        status: bytes = cls.__send_namr_request(
+            server,
+            payload.encode('utf-8')
+        )
 
         return bool.from_bytes(status, 'little')
 
@@ -112,14 +121,15 @@ class NamrClient:
         """
 
         ip, port = namr_server.split(':')
-        socket = setup_client_socket(ip, port)
+        socket = setup_client_socket(ip, int(port))
 
         # Send request
         socket.send(payload)
 
         # receive response
         response = socket.recv(1024)
+        null_byte_index = response.index(b'\x00')
 
         socket.close()
 
-        return response
+        return response[:null_byte_index]
