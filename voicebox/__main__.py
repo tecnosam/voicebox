@@ -11,15 +11,23 @@ logging.basicConfig(
     datefmt='(%H:%M:%S)'
 )
 server = Server()
+
+
 async def run(port, bootstrap_ip=None, bootstrap_port=None):
     await server.listen(port)
     if bootstrap_ip and bootstrap_port:
         try:
             await server.bootstrap([(bootstrap_ip, bootstrap_port)])
-        except Exception as e:
-            logging.error(f"Error bootstrapping with node {bootstrap_ip}:{bootstrap_port} - {e}")
+        except Exception as exc:
+            logging.error(
+                "Error bootstrapping with node %s:%s = %",
+                bootstrap_ip,
+                bootstrap_port,
+                str(exc)
+            )
             return False
     return True
+
 
 async def setusername(username, ip, port):
     result = await server.get(username)
@@ -27,38 +35,66 @@ async def setusername(username, ip, port):
         return False    
     await server.set(username, ip + ":" + str(port))
     return True
-    
+
+
 async def getusername(username):
     result = await server.get(username)
     if result is None:
         return ""
     return result
 
+
 async def main():
     parser = argparse.ArgumentParser(description='Voicebox')
-    parser.add_argument('--port', required=True, type=int, help='Input port number')    
-    parser.add_argument('--bootstrap_port', type=int, default=5678, help='Bootstrap node port number')
-    parser.add_argument('--bootstrap_ip', type=str, default="192.168.0.1", help='Bootstrap node IP address')
+
+    parser.add_argument(
+        '--port',
+        required=True,
+        type=int,
+        help='Input port number'
+    )
+
+    parser.add_argument(
+        '--bootstrap_port',
+        type=int,
+        default=5678,
+        help='Bootstrap node port number'
+    )
+
+    parser.add_argument(
+        '--bootstrap_ip',
+        type=str,
+        default="192.168.0.1",
+        help='Bootstrap node IP address'
+    )
+
     args = parser.parse_args()
 
-    username = input("Username: ")
     ip = extract_ip()
     port = args.port
 
-    if not await run(port=port, bootstrap_ip=args.bootstrap_ip, bootstrap_port=args.bootstrap_port):
+    if not await run(
+        port=port,
+        bootstrap_ip=args.bootstrap_ip,
+        bootstrap_port=args.bootstrap_port
+    ):
         return
-
-    while not await setusername(username, ip, port):
-        print("Username already taken")
-        username = input("Username: ")
 
     while True:
         try:
+            username = input("Username: ")
+
+            if not await setusername(username, ip, port):
+                print("Username already taken")
+                continue
+
             node = Node(username, port=port)
             break
         except OSError:
             port += 1
             print(f"Port in Use. Retrying {port}...")
+        except ValueError as exc:
+            logging.error("Error with username: %s", str(exc))
 
     print(f"Welcome {username}! Others can call you at {ip}:{port}")
 
