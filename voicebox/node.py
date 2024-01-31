@@ -140,8 +140,11 @@ class Node:
             username (str): The username of the node.
             port (int): The port to listen on (default is 4000).
         """
+
+        logging.info("Initializing network node for %s", username)
+
+        self.ip = extract_ip()
         self.port = port
-        self.username = username
 
         self.__encryption_pipeline: List[Type[BaseEncryptor]] = [
             RSAEncryptor,
@@ -151,6 +154,7 @@ class Node:
         self.muted = False
 
         self.socket = setup_server_socket(self.port)
+        self.ip, self.port = self.socket.getsockname()
 
         # Listen on socket
         self.listener_thread = Thread(target=self.listen, daemon=True)
@@ -171,7 +175,7 @@ class Node:
         Args:
             msg: The message to be logged.
         """
-        logging.info("%s: %s", self.username, msg)
+        logging.info("Node Log: %s", msg)
 
     def add_new_connection(
         self,
@@ -261,13 +265,42 @@ class Node:
 
         if machine_socket is None:
             logging.error(
-                "Node %s: %s is Unreachable",
-                self.username,
+                "%s is Unreachable",
                 host
             )
             return
 
         self.add_new_connection(host, machine_socket)
+        return
+
+    def connect_to_machine_with_username(self, username: str):
+
+        """
+            Translates the username to an IP Address and port in
+            the connected naming system and connects to it.
+        """
+
+        connection_information = list(NamrClient.get_user(username))
+
+        # If we have namr servers configured and the username
+        # is not found
+        if NamrClient.namr_servers and not connection_information:
+
+            logging.error(
+                "No node with username %s regisered on namr servers",
+                username
+            )
+
+            return
+
+        host, port = connection_information[0].split(':')
+
+        if host == self.ip and port == self.port:
+
+            logging.error("Cannot connect to self")
+            return
+
+        self.connect_to_machine(host, int(port))
 
     def broadcast_audio(self, audio_stream):
         """
@@ -321,8 +354,13 @@ class Node:
             logging.error("Cannot find Address %s in pool", addr)
             return
 
+        if not connection:
+            return
+
         if inform_connection:
             connection.kill()
+
+        return
 
     @staticmethod
     def validate_connection(address: str) -> bool:
