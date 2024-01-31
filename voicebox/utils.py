@@ -27,12 +27,13 @@ def extract_ip():
     return ip
 
 
-def setup_server_socket(port: int):
+def setup_server_socket(port: int, auto_adjust: bool = True):
     """
     Set up a server socket bound to the local machine's IP address and a specified port.
 
     Args:
         port (int): The port number on which the server will listen for connections.
+        auto_adjust (bool): If true, try the next port untile a free port is seen
 
     Returns:
         socket.socket: The server socket ready to accept incoming connections.
@@ -41,19 +42,32 @@ def setup_server_socket(port: int):
         server_socket = setup_server_socket(8080)
         print("Server socket set up and listening for connections.")
     """
-    host = extract_ip()
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    logging.debug(
-        "Created Socket. Binding connection to %s at %s...",
-        host,
-        port
-    )
-    server.bind((host, port))
+    try:
+        host = extract_ip()
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    logging.debug("Done. You're all set Network-wise")
+        logging.debug(
+            "Created Socket. Binding connection to %s at %s...",
+            host,
+            port
+        )
+        server.bind((host, port))
 
-    return server
+        logging.debug("Done. You're all set Network-wise")
+
+        return server
+    except OSError as exc:
+
+        if auto_adjust:
+
+            logging.info(
+                "Port %s in use. Trying port %s...",
+                port,
+                port+1
+            )
+            return setup_server_socket(port+1, auto_adjust)
+        raise exc
 
 
 def setup_client_socket(host, port):
